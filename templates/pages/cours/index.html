@@ -1,0 +1,164 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block breadcrumbs %}{% endblock breadcrumbs %}
+
+{% block extrastyle %}
+<style>
+    body {
+        background-color: #f8f9fa;
+    }
+    h2 {
+        text-align: center;
+        margin-top: 20px;
+        margin-bottom: 30px;
+    }
+    .list-group-item {
+        transition: background-color 0.3s;
+    }
+    .list-group-item:hover {
+        background-color: #e9ecef;
+    }
+    .add-course-btn {
+        margin-top: 20px;
+        text-align: center;
+    }
+    .search-container {
+        margin-top: 20px;
+    }
+    .dropdown-container {
+        text-align: center;
+        margin-top: 10px;
+        margin-bottom: 20px;
+    }
+    .dropdown {
+        width: 100%;
+        max-width: 300px;
+        margin: auto;
+    }
+</style>
+
+{% endblock extrastyle %}
+
+{% block content %}
+<script>
+    function searchCourses() {
+        const query = document.getElementById('search-input').value.trim();
+        const resultsContainer = document.getElementById('search-results');
+        
+        if (query.length === 0) {
+            // Recharge la page pour afficher tous les cours si le champ est vide
+            window.location.href = '/cours';
+            return;
+        }
+        
+        fetch(`/cours/search/?q=${query}`)
+            .then(response => response.json())
+            .then(data => {
+                resultsContainer.innerHTML = ''; // Efface les résultats précédents
+                
+                if (data.length > 0) {
+                    data.forEach(course => {
+                        const listItem = document.createElement('li');
+                        listItem.className = 'list-group-item';
+                        listItem.innerHTML = `<a href="/cours/${course.id}/" class="text-decoration-none">${course.title}</a>`;
+                        resultsContainer.appendChild(listItem);
+                    });
+                } else {
+                    resultsContainer.innerHTML = '<li class="list-group-item text-muted">Aucun cours trouvé.</li>';
+                }
+            });
+    }
+
+    function handleActionChange() {
+        const action = document.getElementById('action-select').value;
+        if (action === 'upload') {
+            window.location.href = "{% url 'ajouter_cours' %}";
+        } else if (action === 'generate') {
+            window.location.href = "{% url 'generate_course' %}";
+        }
+    }
+</script>
+<div class="container mt-5">
+    <h2>Liste des Cours</h2>
+    
+    <!-- Champ de recherche -->
+    <div class="search-container">
+        <input type="text" id="search-input" onkeyup="searchCourses()" placeholder="Rechercher des cours..." class="form-control mb-3">
+    </div>
+
+    <!-- Liste déroulante pour ajouter un cours ou générer un cours -->
+    <div class="dropdown-container">
+        <select id="action-select" class="form-control dropdown" onchange="handleActionChange()">
+            <option value="" selected disabled>Ajouter ou Générer un cours</option>
+            <option value="upload">Uploader un cours</option>
+            <option value="generate">Générer un cours</option>
+        </select>
+    </div>
+    
+    <!-- Liste des cours -->
+    <ul class="list-group" id="search-results">
+        {% for cours in page_obj %}
+            <li class="list-group-item">
+                <a href="{% url 'details_cours' cours.id %}" class="text-decoration-none">{{ cours.title }}</a>
+            </li>
+        {% empty %}
+            <li class="list-group-item text-muted">Aucun cours disponible.</li>
+        {% endfor %}
+    </ul>
+
+    <!-- Pagination -->
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center mt-4">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1" aria-label="First">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">&laquo;&laquo;</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">&laquo;</span>
+                </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
+                    <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">&raquo;</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">&raquo;&raquo;</span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+
+</div>
+{% endblock content %}

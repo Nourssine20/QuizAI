@@ -1,0 +1,56 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block breadcrumbs %}{% endblock breadcrumbs %}
+
+{% block extrastyle %}
+<style>
+.quiz-card {
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+.quiz-card:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+.quiz-card img {
+    height: 180px;
+    object-fit: cover;
+}
+.quiz-card .card-body {
+    background-color: #f8f9fa;
+    padding: 20px;
+}
+.quiz-card .card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #333;
+}
+.quiz-card .btn-primary {
+    border-radius: 8px;
+    font-weight: 600;
+}
+</style>
+
+{% endblock extrastyle %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        {% for quiz in Quizzes %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card quiz-card shadow-sm">
+                <img class="card-img-top" src="{{ quiz.image_url }}" alt="Quiz Image">
+                <div class="card-body">
+                    <h4 class="card-title">{{ quiz.title }}</h4>
+                    <p class="card-text text-muted"></p>
+                    <a href="{% url 'quiz_detail' quiz.id %}" class="btn btn-primary w-100">Take the Quiz</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock content %}

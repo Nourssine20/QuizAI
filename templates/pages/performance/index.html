@@ -1,0 +1,39 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block breadcrumbs %}{% endblock breadcrumbs %}
+
+{% block extrastyle %}
+<style>
+
+    .iframe-container {display: flex; width: 100%; height: 100%; flex-direction: column; overflow: hidden;}
+    .parent-fit { flex-grow: 1; border: none; margin: 0; padding: 0; height: 100vh; }
+    
+    </style>
+{% endblock extrastyle %}
+
+{% block content %}
+<div class="container mt-5">
+  <h1 class="mb-4">Recommended Quizzes</h1>
+  <div class="row">
+      {% for quiz in recommendations %}
+      <div class="col-md-4 mb-4">
+          <div class="card">
+              <div class="card-body">
+                  <h5 class="card-title">{{ quiz.title }}</h5>
+                  <p class="card-text">Duration: {{ quiz.duration }} minutes</p>
+                  <p class="card-text">Created on: {{ quiz.created_at|date:"F j, Y" }}</p>
+                  <a href="{% url 'quiz_detail' quiz.id %}" class="btn btn-primary">Take Quiz</a>
+              </div>
+          </div>
+      </div>
+      {% empty %}
+      <div class="col-12">
+          <div class="alert alert-info" role="alert">
+              No recommended quizzes available at the moment.
+          </div>
+      </div>
+      {% endfor %}
+  </div>
+</div>
+{% endblock content %}

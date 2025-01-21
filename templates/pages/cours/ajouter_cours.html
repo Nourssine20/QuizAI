@@ -1,0 +1,70 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block breadcrumbs %}{% endblock breadcrumbs %}
+
+{% block extrastyle %}
+<style>
+    body {
+        background-color: #f8f9fa; /* Couleur de fond douce */
+    }
+    h2 {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        background-color: white;
+    }
+</style>
+
+{% endblock extrastyle %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Ajouter un Cours</h2>
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="title">{{ form.title.label }}</label>
+            <input type="text" name="title" class="form-control" value="{{ form.title.value|default_if_none:'' }}">
+        </div>
+
+        <div class="form-group">
+            <label for="content">{{ form.description.label }}</label>
+            <textarea name="content" class="form-control">{{ form.content.value|default_if_none:'' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="fichier">{{ form.fichier.label }}</label>
+            <input type="file" name="fichier" class="form-control-file">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Ajouter</button>
+    </form>
+</div>
+
+<script>
+    const typeAjoutSelect = document.querySelector('select[name="type_ajout"]');
+    const uploadField = document.getElementById('uploadField');
+    const linkField = document.getElementById('linkField');
+
+    typeAjoutSelect.addEventListener('change', function() {
+        if (this.value === 'upload') {
+            uploadField.style.display = 'block';
+            linkField.style.display = 'none';
+        } else if (this.value === 'lien') {
+            uploadField.style.display = 'none';
+            linkField.style.display = 'block';
+        } else {
+            uploadField.style.display = 'none';
+            linkField.style.display = 'none';
+        }
+    });
+</script>
+{% endblock content %}

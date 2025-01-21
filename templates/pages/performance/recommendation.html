@@ -1,0 +1,39 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block breadcrumbs %}{% endblock breadcrumbs %}
+
+{% block extrastyle %}
+
+{% endblock extrastyle %}
+
+{% block content %}
+<h1>Performance Recommendations</h1>
+    
+{% for recommendation in recommendations %}
+    <div>
+        <h2>Performance ID: {{ recommendation.performance_id }}</h2>
+        <p>Recommendation: {{ recommendation.recommendation_text }}</p>
+        <p>Average Score: {{ recommendation.average_score }}</p>
+        <p>Tests Taken: {{ recommendation.tests_taken }}</p>
+        <p>Last Test Score: {{ recommendation.last_test_score }}</p>
+    </div>
+    
+    <h3>Quizzes Based on This Performance</h3>
+    <ul>
+        {% for quiz in quizzes %}
+            {% if quiz.performance_id == recommendation.performance_id %}
+                <li>
+                    <strong>{{ quiz.title }}</strong><br>
+                    Created At: {{ quiz.created_at }}<br>
+                    Duration: {{ quiz.duration }} minutes
+                </li>
+            {% endfor %}
+        {% empty %}
+            <li>No quizzes available for this performance.</li>
+        {% endfor %}
+    </ul>
+{% empty %}
+    <p>No performances available.</p>
+{% endfor %}
+{% endblock content %}

@@ -1,0 +1,28 @@
+
+
+
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Quiz Results: {{ quiz.title }}</h2>
+    <p><strong>Score:</strong> {{ score }}%</p>
+    <p><strong>Correct Answers:</strong> {{ correct_answers }} out of {{ total_questions }}</p>
+    <a href="{% url 'indexQuiz' %}" class="btn btn-primary">Back to Quiz List</a>
+
+    <hr>
+
+    <h3>Your Performance Summary</h3>
+    <p>Average Score: {{ performance.average_score }}</p>
+    <p>Tests Taken: {{ performance.count }}</p>
+    <p>Last Test Score: {{ performance.last_test_score }}</p>
+
+    {% if recommendation %}
+    <div class="alert alert-info mt-4">
+        <h4>Recommendation</h4>
+        <p>{{ recommendation }}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

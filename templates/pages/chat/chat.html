@@ -1,0 +1,149 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Pour la réactivité -->
+    <title>Chatbot</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0; /* Couleur de fond douce */
+        }
+        .chat-container {
+            display: none; /* Cacher par défaut */
+            position: fixed; /* Position fixe pour le chat */
+            bottom: 80px; /* Positionné au-dessus du bouton */
+            right: 20px; /* Distance du bord droit */
+            width: 400px; /* Largeur du chat augmentée */
+            max-height: 500px; /* Hauteur maximale */
+            background: white; /* Fond blanc */
+            border-radius: 8px; /* Bords arrondis */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); /* Ombre douce */
+            z-index: 1000; /* Assurez-vous que le chat est au-dessus des autres éléments */
+            overflow: hidden; /* Cache le contenu qui dépasse */
+        }
+        .chat-header {
+            background-color: #00796b; /* Couleur de l'en-tête du chat */
+            color: white; /* Couleur du texte */
+            padding: 15px; /* Padding */
+            border-top-left-radius: 8px; /* Coins arrondis */
+            border-top-right-radius: 8px; /* Coins arrondis */
+            text-align: center; /* Centrer le texte */
+            font-weight: bold; /* Texte en gras */
+            font-size: 18px; /* Taille de police plus grande */
+        }
+        .messages {
+            max-height: 360px; /* Hauteur maximale pour le défilement */
+            overflow-y: auto; /* Barre de défilement si nécessaire */
+            padding: 10px; /* Padding à l'intérieur */
+            display: flex;
+            flex-direction: column; /* Colonne pour les messages */
+        }
+        .message {
+            margin: 5px 0; /* Espace entre les messages */
+            padding: 10px; /* Ajoute du padding pour le confort */
+            border-radius: 10px; /* Bords arrondis */
+            word-wrap: break-word; /* Gérer les mots longs */
+            max-width: 80%; /* Largeur maximale des messages */
+        }
+        .message.user {
+            background-color: #e1f5fe; /* Couleur de fond pour les messages de l'utilisateur */
+            align-self: flex-end; /* Alignement à droite */
+        }
+        .message.bot {
+            background-color: #c8e6c9; /* Couleur de fond pour les messages du bot */
+            align-self: flex-start; /* Alignement à gauche */
+        }
+        .toggle-chat {
+            position: fixed; /* Position fixe pour le bouton */
+            bottom: 20px; /* Positionné en bas de l'écran */
+            right: 20px; /* Distance du bord droit */
+            width: 70px; /* Largeur du bouton augmentée */
+            height: 70px; /* Hauteur du bouton augmentée */
+            background-color: #00796b; /* Couleur du bouton */
+            color: white; /* Couleur du texte */
+            border-radius: 50%; /* Cercle */
+            display: flex; /* Utiliser flexbox pour centrer */
+            align-items: center; /* Centre verticalement */
+            justify-content: center; /* Centre horizontalement */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); /* Ombre douce */
+            cursor: pointer; /* Change le curseur au survol */
+            z-index: 1000; /* Assurez-vous que le bouton est au-dessus des autres éléments */
+            font-size: 24px; /* Taille de la police dans le bouton */
+            transition: background-color 0.3s; /* Transition douce */
+        }
+        .toggle-chat:hover {
+            background-color: #005b4f; /* Couleur au survol */
+        }
+        form {
+            display: flex; /* Utiliser flexbox pour le formulaire */
+            padding: 10px; /* Padding autour du formulaire */
+            border-top: 1px solid #ccc; /* Bordure au-dessus du formulaire */
+            background-color: #f9f9f9; /* Couleur de fond douce */
+        }
+        input[type="text"] {
+            flex: 1; /* Prendre tout l'espace disponible */
+            padding: 10px; /* Padding intérieur */
+            border: 1px solid #ccc; /* Bordure grise */
+            border-radius: 5px; /* Coins arrondis */
+            font-size: 14px; /* Taille de police */
+            margin-right: 10px; /* Espace à droite */
+            outline: none; /* Supprime l'outline par défaut */
+            transition: border-color 0.3s; /* Transition douce */
+        }
+        input[type="text"]:focus {
+            border-color: #00796b; /* Couleur de bordure au focus */
+        }
+        button {
+            padding: 10px 10px; /* Réduire le padding pour rendre le bouton plus petit */
+            background-color: #00796b; /* Couleur de fond du bouton */
+            color: white; /* Couleur du texte du bouton */
+            border: none; /* Supprime la bordure par défaut */
+            border-radius: 5px; /* Bords arrondis */
+            cursor: pointer; /* Change le curseur au survol */
+            font-size: 14px; /* Taille de la police réduite */
+            transition: background-color 0.3s; /* Transition douce */
+            height: 40px; /* Hauteur uniforme pour aligner avec le champ de saisie */
+        }
+        button:hover {
+            background-color: #005b4f; /* Couleur au survol */
+        }
+    </style>
+</head>
+<body>
+    <div class="toggle-chat" onclick="toggleChat()">💬</div> <!-- Bouton flottant -->
+
+    <div class="chat-container" id="chatContainer">
+        <div class="chat-header">Chatbot</div>
+        <div class="messages">
+            {% for message in messages %}
+                <div class="message user">
+                    <strong>Vous:</strong> {{ message.user_message }}
+                </div>
+                <div class="message bot">
+                    <strong>Bot:</strong> {{ message.bot_response }}
+                </div>
+            {% endfor %}
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <input type="text" name="user_message" placeholder="Écrivez votre message ici..." required>
+            <button type="submit">Soumettre</button> <!-- Texte du bouton modifié -->
+        </form>
+    </div>
+
+    <script>
+        function toggleChat() {
+            const chatContainer = document.getElementById('chatContainer');
+            chatContainer.style.display = chatContainer.style.display === 'none' || chatContainer.style.display === '' ? 'block' : 'none';
+        }
+    </script>
+</body>
+</html>
+{% endblock content %}

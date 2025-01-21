@@ -1,0 +1,327 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block extrastyle %}
+<!-- Include Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+<style>
+    /* General styles for the container */
+    .container {
+        max-width: 800px;
+        margin: auto;
+    }
+
+    /* Form container styles */
+    .form-container {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 25px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+    }
+
+    /* Title styles */
+    h2 {
+        color: #343a40;
+        font-weight: 600;
+    }
+
+    /* Dropdown styles */
+    select {
+        width: 100%; /* Full width for dropdowns */
+        padding: 10px;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        background-color: #ffffff; /* White background */
+        transition: border-color 0.3s;
+    }
+
+    select:hover, select:focus {
+        border-color: #80bdff; /* Change border color on hover/focus */
+        outline: none; /* Remove outline */
+    }
+
+    /* Question list styles */
+    .question-list {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: #e9ecef;
+        border-radius: 10px;
+        list-style-type: none;
+    }
+
+    /* Individual question item styles */
+    .question-item {
+        padding: 12px 15px;
+        border-bottom: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background-color 0.3s;
+    }
+
+    /* Hover effect for question items */
+    .question-item:hover {
+        background-color: #f1f1f1; /* Light grey background on hover */
+    }
+
+    /* Last question item style */
+    .question-item:last-child {
+        border-bottom: none;
+    }
+
+    /* Button styles */
+    .save-question {
+        margin-left: 15px;
+        background-color: #28a745; /* Green button for save */
+        border: none;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    /* Button hover effect */
+    .save-question:hover {
+        background-color: #218838; /* Darker green on hover */
+    }
+
+    /* Confirmation dialog styles */
+    #confirmationDialog {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        border: 1px solid #ccc;
+        padding: 20px;
+        z-index: 1000;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+    }
+
+    /* Dialog paragraph styles */
+    #confirmationDialog p {
+        margin-bottom: 20px;
+        color: #495057; /* Dark text for confirmation dialog */
+    }
+
+    /* Dialog button styles */
+    #confirmSave, #cancelSave {
+        margin-right: 10px;
+    }
+
+    /* Icons in buttons */
+    .btn-icon {
+        margin-right: 5px; /* Space between icon and text */
+    }
+
+    .filter-container {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+
+    /* Styles pour la barre de recherche */
+    /* Style pour le conteneur de la barre de recherche */
+    .search-container {
+        display: flex; /* Utilise le flexbox pour aligner les éléments */
+        align-items: center; /* Centre verticalement les éléments */
+    }
+
+    /* Styles pour la barre de recherche */
+    .search-bar {
+        flex: 1; /* Permet au champ de recherche de prendre l'espace restant */
+        margin-right: 10px; /* Espace à droite du champ */
+        padding: 10px; /* Ajoutez du padding pour un meilleur confort */
+        border: 1px solid #ced4da; /* Bordure grise pour le champ de recherche */
+        border-radius: 5px; /* Coins arrondis */
+        font-size: 16px; /* Taille de police */
+    }
+
+    /* Style pour le placeholder pour le rendre plus visible */
+    .search-bar::placeholder {
+        color: #6c757d; /* Couleur grise pour le placeholder */
+        opacity: 1; /* Assurez-vous que le placeholder est opaque */
+    }
+</style>
+{% endblock extrastyle %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mt-4 mb-4 text-center">Générer des Questions</h2>
+    
+    <!-- Formulaire pour générer des questions -->
+    <div class="form-container">
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Générer des questions
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Barre de recherche et filtres -->
+    <div class="filter-container">
+        <div class="search-container">
+            <input type="text" id="search" class="form-control search-bar" placeholder="Rechercher des questions..." />
+        </div>        
+        <select id="questionTypeFilter" class="form-control" aria-label="Type de question">
+            <option value="">Tous les types</option>
+            <option value="choice">Choix multiple</option>
+            <option value="true_false">Vrai/Faux</option>
+            <option value="open">Question Ouverte</option>
+            
+        </select>
+    </div>
+
+    <!-- Messages pour l'utilisateur -->
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <div class="export-buttons text-center mb-4">
+        <a href="{% url 'export_questions_csv' %}" class="btn btn-secondary">
+            <i class="fas fa-file-csv btn-icon"></i> Exporter en CSV
+        </a>
+        <a href="{% url 'export_questions_pdf' %}" class="btn btn-secondary">
+            <i class="fas fa-file-pdf btn-icon"></i> Exporter en PDF
+        </a>
+    </div>
+    
+{% if questions %}
+<h3 class="text-center">Questions Générées :</h3>
+<ul class="question-list" id="questionList">
+    {% for question in questions %}
+        <li class="question-item" data-type="{{ question.question_type }}">
+            <span class="question-content">{{ question.content }}</span>
+            <input type="text" class="edit-question" value="{{ question.content }}" style="display:none;" />
+            <button class="edit-question-btn">
+                <i class="fas fa-edit btn-icon"></i> Éditer
+            </button>
+            <button class="save-question" data-question-content="{{ question.content }}">
+                <i class="fas fa-save btn-icon"></i> Enregistrer
+            </button>
+        </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="text-center">Aucune question générée.</p>
+{% endif %}
+
+</div>
+
+<!-- Boîte de dialogue de confirmation -->
+<div id="confirmationDialog">
+    <p>Êtes-vous sûr de vouloir enregistrer cette question ?</p>
+    <button id="confirmSave" class="btn btn-primary">Oui</button>
+    <button id="cancelSave" class="btn btn-secondary">Non</button>
+</div>
+
+<script>
+// Gestion des boutons d'édition
+document.querySelectorAll('.edit-question-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const questionItem = this.closest('.question-item');
+        const questionContentSpan = questionItem.querySelector('.question-content');
+        const editInput = questionItem.querySelector('.edit-question');
+
+        if (editInput.style.display === 'none') {
+            questionContentSpan.style.display = 'none'; // Masquer le contenu de la question
+            editInput.style.display = 'block'; // Afficher le champ d'édition
+            this.textContent = "Annuler"; // Changer le texte du bouton
+        } else {
+            questionContentSpan.style.display = 'block'; // Afficher le contenu de la question
+            editInput.style.display = 'none'; // Masquer le champ d'édition
+            this.textContent = "Éditer"; // Réinitialiser le texte du bouton
+        }
+    });
+});
+
+// Modification de la logique de sauvegarde pour prendre en compte le contenu édité
+document.querySelectorAll('.save-question').forEach(button => {
+    button.addEventListener('click', function() {
+        const questionItem = this.closest('.question-item');
+        const questionContent = questionItem.querySelector('.edit-question').value.trim() || this.getAttribute('data-question-content').trim();
+        const questionType = '{{ form.question_type.value }}';
+        const documentId = '{{ form.document.value }}';
+        const confirmationDialog = document.getElementById('confirmationDialog');
+        confirmationDialog.style.display = 'block';
+
+        document.getElementById('confirmSave').onclick = function() {
+            fetch(`/questions/save_question/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    content: questionContent,
+                    question_type: questionType,
+                    document_id: documentId
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Question enregistrée avec succès !');
+                    location.reload(); // Reload the page to update the questions
+                } else {
+                    alert(data.message); // Display the error message
+                }
+            })
+            .catch(error => {
+                console.error('Il y a eu un problème avec votre opération fetch:', error);
+                alert('Une erreur s\'est produite lors de l\'enregistrement de la question.');
+            });
+
+            confirmationDialog.style.display = 'none';
+        };
+
+        document.getElementById('cancelSave').onclick = function() {
+            confirmationDialog.style.display = 'none';
+        };
+    });
+});
+
+
+// Recherche et filtrage
+document.getElementById('search').addEventListener('input', filterQuestions);
+document.getElementById('questionTypeFilter').addEventListener('change', filterQuestions);
+
+function filterQuestions() {
+    const searchTerm = document.getElementById('search').value.toLowerCase();
+    const questionType = document.getElementById('questionTypeFilter').value;
+    const questions = document.querySelectorAll('.question-item');
+
+    questions.forEach(question => {
+        const questionContent = question.querySelector('span').textContent.toLowerCase();
+        const questionTypeData = question.getAttribute('data-type');
+
+        const matchesSearch = questionContent.includes(searchTerm);
+        const matchesType = questionType === '' || questionTypeData === questionType;
+
+        if (matchesSearch && matchesType) {
+            question.style.display = 'flex'; // Show question
+        } else {
+            question.style.display = 'none'; // Hide question
+        }
+    });
+}
+</script>
+{% endblock content %}

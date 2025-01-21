@@ -1,0 +1,545 @@
+{% extends 'layouts/base.html' %}
+{% comment %} {% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block breadcrumbs %}{% endblock breadcrumbs %}
+
+{% block extrastyle %}
+<style>
+    .indice {
+        display: none;
+        margin-top: 10px;
+        font-style: italic;
+        color: #555;
+    }
+    .feedback-container, .avis-container {
+        margin-top: 20px;
+        padding: 15px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background: #f0f0f0;
+    }
+    .message, .feedback-message {
+        margin-top: 10px;
+        font-weight: bold;
+        display: none;
+    }
+    .submit-button {
+        margin-top: 10px;
+        display: none; /* Masqué par défaut */
+    }
+</style>
+{% endblock extrastyle %}
+
+{% block content %}
+<script>
+    function afficherIndice(questionId) {
+        const indiceElement = document.getElementById(`indice_${questionId}`);
+        indiceElement.style.display = indiceElement.style.display === "none" ? "block" : "none";
+    }
+    function montrerFeedback(questionId) {
+        const feedbackOui = document.getElementById(`feedback-oui-${questionId}`);
+        const feedbackNon = document.getElementById(`feedback-non-${questionId}`);
+        const feedbackMessage = document.getElementById(`feedback-message-${questionId}`);
+        const submitButton = document.getElementById(`submit-button-${questionId}`);
+        const choix = document.querySelector(`input[name="feedback_${questionId}"]:checked`);
+
+        feedbackOui.style.display = "none";
+        feedbackNon.style.display = "none";
+        feedbackMessage.style.display = "none";
+        submitButton.style.display = "none";
+
+        if (choix) {
+            if (choix.value === "oui") {
+                feedbackOui.style.display = "block";
+                feedbackMessage.innerHTML = "Merci pour votre retour ! 😊";
+            } else {
+                feedbackNon.style.display = "block";
+                feedbackMessage.innerHTML = "Nous nous excusons pour cela. 😔";
+                submitButton.style.display = "block"; // Affiche le bouton de soumission
+            }
+            feedbackMessage.style.display = "block";
+        }
+    }
+
+    function submitFeedback(questionId) {
+        const userComment = document.getElementById(`avis-text-${questionId}`);
+        const feedbackMessage = document.getElementById(`feedback-message-${questionId}`);
+        const feedbackInput = document.querySelector(`input[name="feedback_${questionId}"]:checked`);
+    
+        if (!userComment) {
+            console.error(`Comment textarea for question ${questionId} not found.`);
+            return;
+        }
+    
+        const commentValue = userComment.value.trim();
+        const helpful = feedbackInput ? (feedbackInput.value === "oui") : false;
+    
+        if (!commentValue) {
+            alert("Please enter your feedback before submitting.");
+            return;
+        }
+    
+        const formData = new FormData();
+        formData.append('question_id', questionId);
+        formData.append('user_comment', commentValue);
+        formData.append('helpful', helpful);
+    
+        fetch("{% url 'submit_feedback' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                alert("Feedback submitted successfully!");
+                // Clear the input fields
+                userComment.value = ''; // Clear the comment textarea
+                feedbackMessage.innerHTML = ''; // Clear the feedback message
+                feedbackMessage.style.display = 'none'; // Hide the feedback message
+                // Reset radio buttons
+                document.querySelector(`input[name="feedback_${questionId}"]:checked`).checked = false;
+            } else {
+                alert("There was an error submitting your feedback.");
+            }
+        })
+        .catch(error => console.error("Error:", error));
+    }
+
+    
+
+    function supprimerAvis(questionId) {
+        const userComment = document.getElementById(`avis-text-${questionId}`);
+    const feedbackMessage = document.getElementById(`feedback-message-${questionId}`);
+    
+    // Clear the comment textarea
+    userComment.value = '';
+    
+    // Clear the feedback message
+    feedbackMessage.innerHTML = '';
+    feedbackMessage.style.display = 'none'; // Hide the feedback message
+
+    // Reset radio buttons
+    const feedbackInputs = document.querySelectorAll(`input[name="feedback_${questionId}"]`);
+    feedbackInputs.forEach(input => {
+        input.checked = false; // Uncheck all feedback radio buttons
+    });
+    }
+
+    function soumettreQuestion(questionId) {
+        // Logique pour afficher un autre indice
+        //afficherIndice(questionId);
+        fetch("{% url 'quiz_detail' quiz.id %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({ question_id: questionId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById(`indice_${questionId}`).textContent = data.new_hint;
+            document.getElementById(`indice_${questionId}`).style.display = 'block';
+        })
+        .catch(error => console.error('Error:', error));
+
+        
+    }
+</script>
+<div class="container mt-5">
+    <h2>{{ quiz.title }}</h2>
+    
+    <h4 class="text-danger">Time Remaining: <span id="timer"></span></h4>
+    
+    <!-- Display quiz questions here -->
+    <form action="{% url 'submit_quiz' quiz.id %}" method="POST">
+        {% csrf_token %}
+        
+        {% for question in questions %}
+        <div class="question mb-4">
+            <button type="button" onclick="afficherIndice('{{ question.id }}')">Afficher l'indice</button>
+            <p id="indice_{{ question.id }}" class="indice">Indice: {{ question.generated_hint }}</p>
+            <p><strong>{{ question.content }}</strong></p>
+
+            
+            <!-- Multiple Choice (Choix Multiple) -->
+            {% if question.question_type == 'choice' %}
+                {% for answer in question.answers.all %}
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="question_{{ question.id }}" value="{{ answer.id }}" id="answer_{{ answer.id }}">
+                    <label class="form-check-label" for="answer_{{ answer.id }}">{{ answer.text }}</label>
+                </div>
+                {% endfor %}
+            
+            <!-- True/False (Vrai/Faux) -->
+            {% elif question.question_type == 'true_false' %}
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="question_{{ question.id }}" value="true" id="true_{{ question.id }}">
+                    <label class="form-check-label" for="true_{{ question.id }}">Vrai</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="question_{{ question.id }}" value="false" id="false_{{ question.id }}">
+                    <label class="form-check-label" for="false_{{ question.id }}">Faux</label>
+                </div>
+            
+            <!-- Open-Ended (Question Ouverte) -->
+            {% elif question.question_type == 'open' %}
+                <div class="form-group">
+                    <textarea class="form-control" name="question_{{ question.id }}" rows="3" placeholder="Votre réponse..."></textarea>
+                </div>
+            {% endif %}
+            <button type="button" class="submit-button" id="submit-button-{{ question.id }}" onclick="soumettreQuestion('{{question.id }}')">Soumettre cette question</button>
+
+            <!-- Section pour le feedback -->
+            <div class="feedback-container">
+                <h3>Avez-vous trouvé l'indice utile ?</h3>
+                <label>
+                    <input type="radio" name="feedback_{{ question.id }}" value="oui" onchange="montrerFeedback('{{question.id }}')">
+                    Oui
+                </label>
+                <label>
+                    <input type="radio" name="feedback_{{ question.id }}" value="non" onchange="montrerFeedback('{{ question.id }}')">
+                    Non
+                </label>
+
+                <div id="feedback-oui-{{ question.id }}" style="display:none;">Merci pour votre retour positif ! 😊</div>
+                <div id="feedback-non-{{ question.id }}" style="display:none;">Nous nous excusons pour cela. 😔</div>
+                <div id="feedback-message-{{ question.id }}" class="feedback-message"></div>
+            </div>
+
+            <!-- Section pour avis utilisateur -->
+            <div class="avis-container">
+                <h3>Donnez votre avis :</h3>
+                <textarea id="avis-text-{{ question.id }}" rows="3" placeholder="Écrivez votre avis ici..."></textarea><br>
+                <button type="button" onclick="submitFeedback('{{ question.id }}')">Ajouter</button>
+              
+                <button type="button" onclick="supprimerAvis('{{ question.id }}')">Clear</button>
+                <p id="avis-display-{{ question.id }}" style="display: none;"></p>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <button type="submit" class="btn btn-primary mt-3">Submit Quiz</button>
+    </form>
+</div>
+
+<!-- Countdown Timer Script -->
+<script>
+    // Initialize timer based on quiz duration
+    var quizDuration = {{ quiz_duration }};
+    var timerDisplay = document.getElementById('timer');
+    var timer = quizDuration, minutes, seconds;
+
+    // Timer countdown function
+    function countdown() {
+        minutes = parseInt(timer / 60, 10);
+        seconds = parseInt(timer % 60, 10);
+
+        minutes = minutes < 10 ? "0" + minutes : minutes;
+        seconds = seconds < 10 ? "0" + seconds : seconds;
+
+        timerDisplay.textContent = minutes + ":" + seconds;
+
+        // Redirect to submit page when time is up
+        if (--timer < 0) {
+            alert("Time's up!");
+            document.forms[0].submit();
+        }
+    }
+
+    // Start countdown every second
+    setInterval(countdown, 1000);
+</script>
+{% endblock content %} {% endcomment %}
+
+
+{% load static %}
+
+{% block breadcrumbs %}{% endblock breadcrumbs %}
+
+{% block extrastyle %}
+<style>
+    /* Main container for ergonomic layout */
+    .feedback-container, .avis-container {
+        margin-top: 20px;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #f9f9f9;
+        box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    .feedback-container h3, .avis-container h3 {
+        font-size: 1.2rem;
+        color: #00796b;
+        margin-bottom: 12px;
+    }
+
+    /* Enhanced button styling */
+    .submit-button, .avis-container button {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 10px 18px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #fff;
+        background-color: #00796b;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s, transform 0.2s ease;
+        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .submit-button:hover, .avis-container button:hover {
+        background-color: #004d40;
+        transform: translateY(-1px);
+    }
+    .submit-button:active, .avis-container button:active {
+        transform: scale(0.98);
+        box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Styled textarea for better feedback input */
+    textarea {
+        width: 100%;
+        padding: 12px;
+        margin-top: 8px;
+        font-size: 0.95rem;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        resize: vertical;
+        transition: border-color 0.3s, box-shadow 0.3s;
+        box-shadow: inset 0px 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    textarea:focus {
+        border-color: #00796b;
+        box-shadow: 0px 0px 5px rgba(0, 121, 107, 0.2);
+        outline: none;
+    }
+
+    /* Subtle text feedback messages */
+    .message, .feedback-message {
+        margin-top: 12px;
+        font-weight: bold;
+        color: #388e3c;
+        display: none;
+    }
+
+</style>
+{% endblock extrastyle %}
+
+{% block content %}
+<script>
+    
+        function afficherIndice(questionId) {
+            const indiceElement = document.getElementById(`indice_${questionId}`);
+            indiceElement.style.display = indiceElement.style.display === "none" ? "block" : "none";
+        }
+        function montrerFeedback(questionId) {
+            const feedbackOui = document.getElementById(`feedback-oui-${questionId}`);
+            const feedbackNon = document.getElementById(`feedback-non-${questionId}`);
+            const feedbackMessage = document.getElementById(`feedback-message-${questionId}`);
+            const submitButton = document.getElementById(`submit-button-${questionId}`);
+            const choix = document.querySelector(`input[name="feedback_${questionId}"]:checked`);
+        
+            // Reset visibility
+            feedbackOui.style.display = "none";
+            feedbackNon.style.display = "none";
+            feedbackMessage.style.display = "none";
+            submitButton.style.display = "none";
+        
+            // Show relevant feedback and message based on selection
+            if (choix) {
+                if (choix.value === "oui") {
+                    feedbackOui.style.display = "block";
+                    feedbackMessage.innerHTML = "Merci pour votre retour ! 😊";
+                } else {
+                    feedbackNon.style.display = "block";
+                    feedbackMessage.innerHTML = "Nous nous excusons pour cela. 😔";
+                    submitButton.style.display = "block"; // Show the submit button if "Non" is selected
+                }
+                feedbackMessage.style.display = "block";
+            }
+        }
+        function submitFeedback(questionId) {
+            const userComment = document.getElementById(`avis-text-${questionId}`);
+            const feedbackMessage = document.getElementById(`feedback-message-${questionId}`);
+            const feedbackInput = document.querySelector(`input[name="feedback_${questionId}"]:checked`);
+        
+            if (!userComment) {
+                console.error(`Comment textarea for question ${questionId} not found.`);
+                return;
+            }
+        
+            const commentValue = userComment.value.trim();
+            const helpful = feedbackInput ? (feedbackInput.value === "oui") : false;
+        
+            if (!commentValue) {
+                alert("Please enter your feedback before submitting.");
+                return;
+            }
+        
+            const formData = new FormData();
+            formData.append('question_id', questionId);
+            formData.append('user_comment', commentValue);
+            formData.append('helpful', helpful);
+        
+            fetch("{% url 'submit_feedback' %}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert("Feedback submitted successfully!");
+                    // Clear the input fields
+                    userComment.value = ''; // Clear the comment textarea
+                    feedbackMessage.innerHTML = ''; // Clear the feedback message
+                    feedbackMessage.style.display = 'none'; // Hide the feedback message
+                    // Reset radio buttons
+                    document.querySelector(`input[name="feedback_${questionId}"]:checked`).checked = false;
+                } else {
+                    alert("There was an error submitting your feedback.");
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        }
+    
+        
+    
+        function supprimerAvis(questionId) {
+            const userComment = document.getElementById(`avis-text-${questionId}`);
+        const feedbackMessage = document.getElementById(`feedback-message-${questionId}`);
+        
+        // Clear the comment textarea
+        userComment.value = '';
+        
+        // Clear the feedback message
+        feedbackMessage.innerHTML = '';
+        feedbackMessage.style.display = 'none'; // Hide the feedback message
+    
+        // Reset radio buttons
+        const feedbackInputs = document.querySelectorAll(`input[name="feedback_${questionId}"]`);
+        feedbackInputs.forEach(input => {
+            input.checked = false; // Uncheck all feedback radio buttons
+        });
+        }
+    
+        function soumettreQuestion(questionId) {
+            // Logique pour afficher un autre indice
+            //afficherIndice(questionId);
+            fetch("{% url 'quiz_detail' quiz.id %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({ question_id: questionId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById(`indice_${questionId}`).textContent = data.new_hint;
+                document.getElementById(`indice_${questionId}`).style.display = 'block';
+            })
+            .catch(error => console.error('Error:', error));
+    
+            
+        }
+</script>
+
+<div class="container mt-5">
+    <h2>{{ quiz.title }}</h2>
+    
+    <h4 class="text-danger">Time Remaining: <span id="timer"></span></h4>
+    
+    <form action="{% url 'submit_quiz' quiz.id %}" method="POST">
+        {% csrf_token %}
+        
+        {% for question in questions %}
+        <div class="question mb-4">
+            <button type="button" onclick="afficherIndice('{{ question.id }}')">Afficher l'indice</button>
+            <p id="indice_{{ question.id }}" class="indice">Indice: {{ question.generated_hint }}</p>
+            <p><strong>{{ question.content }}</strong></p>
+
+            {% if question.question_type == 'choice' %}
+                {% for answer in question.answers.all %}
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="question_{{ question.id }}" value="{{ answer.id }}" id="answer_{{ answer.id }}">
+                    <label class="form-check-label" for="answer_{{ answer.id }}">{{ answer.text }}</label>
+                </div>
+                {% endfor %}
+            {% elif question.question_type == 'true_false' %}
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="question_{{ question.id }}" value="true" id="true_{{ question.id }}">
+                    <label class="form-check-label" for="true_{{ question.id }}">Vrai</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="question_{{ question.id }}" value="false" id="false_{{ question.id }}">
+                    <label class="form-check-label" for="false_{{ question.id }}">Faux</label>
+                </div>
+            {% elif question.question_type == 'open' %}
+                <div class="form-group">
+                    <textarea class="form-control" name="question_{{ question.id }}" rows="3" placeholder="Votre réponse..."></textarea>
+                </div>
+            {% endif %}
+            <button type="button" class="submit-button" id="submit-button-{{ question.id }}" style="display: none;" onclick="soumettreQuestion('{{question.id }}')">Soumettre cette question</button>
+
+            <div class="feedback-container">
+                <h3>Avez-vous trouvé l'indice utile ?</h3>
+                <label>
+                    <input type="radio" name="feedback_{{ question.id }}" value="oui" onchange="montrerFeedback('{{question.id }}')">
+                    Oui
+                </label>
+                <label>
+                    <input type="radio" name="feedback_{{ question.id }}" value="non" onchange="montrerFeedback('{{ question.id }}')">
+                    Non
+                </label>
+                <div id="feedback-oui-{{ question.id }}" style="display:none;">Merci pour votre retour positif ! 😊</div>
+                <div id="feedback-non-{{ question.id }}" style="display:none;">Nous nous excusons pour cela. 😔</div>
+                <div id="feedback-message-{{ question.id }}" class="feedback-message"></div>
+            </div>
+
+            <div class="avis-container">
+                <h3>Donnez votre avis :</h3>
+                <textarea id="avis-text-{{ question.id }}" rows="3" placeholder="Écrivez votre avis ici..."></textarea><br>
+                <button type="button" class="submit-button" onclick="submitFeedback('{{ question.id }}')">Soumettre l'avis</button>
+                <button type="button" class="submit-button" onclick="supprimerAvis('{{ question.id }}')">Effacer l'avis</button>
+            </div>
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary mt-3">Submit Quiz</button>
+    </form>
+</div>
+
+<script>
+    var quizDuration = {{ quiz_duration }};
+    var timerDisplay = document.getElementById('timer');
+    var timer = quizDuration, minutes, seconds;
+
+    // Timer countdown function
+    function countdown() {
+        minutes = parseInt(timer / 60, 10);
+        seconds = parseInt(timer % 60, 10);
+
+        minutes = minutes < 10 ? "0" + minutes : minutes;
+        seconds = seconds < 10 ? "0" + seconds : seconds;
+
+        timerDisplay.textContent = minutes + ":" + seconds;
+
+        // Redirect to submit page when time is up
+        if (--timer < 0) {
+            alert("Time's up!");
+            document.forms[0].submit();
+        }
+    }
+
+    // Start countdown every second
+    setInterval(countdown, 1000);
+</script>
+{% endblock content %}

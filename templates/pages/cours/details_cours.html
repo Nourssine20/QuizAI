@@ -1,0 +1,242 @@
+{% extends 'layouts/base.html' %}
+
+{% load static %}
+
+{% block breadcrumbs %}{% endblock breadcrumbs %}
+
+{% block extrastyle %}
+<style>
+    body {
+        background-color: #f0f4f8;
+        font-family: 'Arial', sans-serif;
+    }
+
+    .card {
+        margin-bottom: 20px;
+        border-radius: 10px;
+        border: none;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-header {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .action-buttons button {
+        margin-right: 10px; /* Espacement entre les boutons */
+    }
+
+    #pdf-viewer {
+        width: 100%;
+        max-height: 600px;
+        overflow: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    h2 {
+        color: #333;
+    }
+
+    .file-preview {
+        border: 1px solid #007bff;
+        border-radius: 10px;
+        padding: 10px;
+        background-color: #fff;
+    }
+</style>
+
+{% endblock extrastyle %}
+
+{% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+<div class="container mt-5">
+    <h2 class="text-center">Détails du Cours: {{ cours.title }}</h2>
+
+    <div class="card">
+        <div class="card-body">
+            <p><strong>Description:</strong></p>
+            <div>{{ cours.content|safe }}</div> <!-- Rendu HTML avec 'safe' -->
+            <p><strong>Date d'Upload:</strong> {{ cours.date_creation }}</p>
+            <p><strong>Date de Modification:</strong> {{ cours.date_modification }}</p>
+            <div class="action-buttons">
+                <button class="btn btn-warning" data-toggle="modal" data-target="#editModal">
+                    <i class="fas fa-edit"></i> Modifier
+                </button>
+                <button class="btn btn-danger" data-toggle="modal" data-target="#deleteModal">
+                    <i class="fas fa-trash-alt"></i> Supprimer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aperçu du fichier -->
+    <div class="modal-body">
+        {% if cours.fichier %}
+        <div class="card file-preview">
+            <div class="card-body">
+                {% with file_extension=cours.fichier.name|slice:"-4:" %}
+                <h5 class="text-center">
+                    {% if file_extension in ".pdf" %} Aperçu du PDF
+                    {% elif file_extension in ".jpg" or file_extension in ".jpeg" or file_extension in ".png" or file_extension in ".gif" %} Image du Cours
+                    {% elif file_extension in ".mp4" or file_extension in ".webm" or file_extension in ".ogg" %} Vidéo du Cours
+                    {% else %} Type de fichier non pris en charge
+                    {% endif %}
+                </h5>
+
+                <div id="pdf-viewer" style="{% if file_extension in '.pdf' %}display:block;{% else %}display:none;{% endif %}"></div>
+                <img src="{{ cours.fichier.url }}" alt="Image du cours" class="img-fluid" style="{% if file_extension in '.jpg' or file_extension in '.jpeg' or file_extension in '.png' or file_extension in '.gif' %}display:block;{% else %}display:none;{% endif %}">
+                <video width="100%" height="auto" controls style="{% if file_extension in '.mp4' or file_extension in '.webm' or file_extension in '.ogg' %}display:block;{% else %}display:none;{% endif %}">
+                    <source src="{{ cours.fichier.url }}" type="video/mp4">
+                    Votre navigateur ne supporte pas la vidéo.
+                </video>
+
+                {% if file_extension in ".pdf" %}
+                <div class="text-center mt-2">
+                    <button id="prev" class="btn btn-secondary">
+                        <i class="fas fa-chevron-left"></i> Page Précédente
+                    </button>
+                    <span id="page-info">Page 1</span>
+                    <button id="next" class="btn btn-secondary">
+                        Page Suivante <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Modal pour modifier le cours -->
+    <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Modifier le Cours: {{ cours.title }}</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" enctype="multipart/form-data" action="{% url 'modifier_cours' cours.id %}">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="title">Titre</label>
+                            <input type="text" id="title" name="title" value="{{ cours.title }}" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="content">Description</label>
+                            <textarea id="content" name="content" class="form-control" required>{{ cours.content }}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="fichier">Fichier actuel:</label>
+                            <p>{{ cours.fichier.name }}</p>
+                            <label for="nouveau_fichier">Télécharger un nouveau fichier (si nécessaire)</label>
+                            <input type="file" id="nouveau_fichier" name="fichier" class="form-control-file">
+                            <small class="form-text text-muted">Laissez ce champ vide si vous ne souhaitez pas changer le fichier actuel.</small>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Sauvegarder
+                            </button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                                <i class="fas fa-times"></i> Annuler
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour supprimer le cours -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">Confirmer la Suppression</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    Êtes-vous sûr de vouloir supprimer ce cours ?
+                </div>
+                <div class="modal-footer">
+                    <form method="POST" action="{% url 'supprimer_cours' cours.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash-alt"></i> Supprimer
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                            <i class="fas fa-times"></i> Annuler
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts de Bootstrap et jQuery -->
+    {% if cours.fichier %}
+    <script>
+        var url = '{{ cours.fichier.url }}';
+        var pdfDoc = null;
+        var currentPage = 1;
+        var pageRendering = false;
+        var pageNumPending = null;
+
+        // Initialisation du PDF.js
+        pdfjsLib.getDocument(url).promise.then(function (pdf) {
+            pdfDoc = pdf;
+            document.getElementById('page-info').textContent = 'Page ' + currentPage + ' de ' + pdfDoc.numPages;
+            renderPage(currentPage);
+        });
+
+        function renderPage(num) {
+            pageRendering = true;
+            pdfDoc.getPage(num).then(function (page) {
+                var viewport = page.getViewport({ scale: 1.5 });
+                var canvas = document.createElement('canvas');
+                var context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                document.getElementById('pdf-viewer').innerHTML = '';
+                document.getElementById('pdf-viewer').appendChild(canvas);
+                var renderContext = {
+                    canvasContext: context,
+                    viewport: viewport
+                };
+                var renderTask = page.render(renderContext);
+                renderTask.promise.then(function () {
+                    pageRendering = false;
+                    if (pageNumPending !== null) {
+                        renderPage(pageNumPending);
+                        pageNumPending = null;
+                    }
+                });
+            });
+            document.getElementById('page-info').textContent = 'Page ' + num + ' de ' + pdfDoc.numPages;
+        }
+
+        document.getElementById('prev').addEventListener('click', function () {
+            if (currentPage <= 1) return;
+            currentPage--;
+            renderPage(currentPage);
+        });
+
+        document.getElementById('next').addEventListener('click', function () {
+            if (currentPage >= pdfDoc.numPages) return;
+            currentPage++;
+            renderPage(currentPage);
+        });
+    </script>
+    {% endif %}
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</div>
+{% endblock content %}

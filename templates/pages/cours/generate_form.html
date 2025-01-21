@@ -1,0 +1,39 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block breadcrumbs %}{% endblock breadcrumbs %}
+
+{% block extrastyle %}
+<style>
+    body {
+        background-color: #f8f9fa; /* Couleur de fond douce */
+    }
+    h2 {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        background-color: white;
+    }
+</style>
+
+{% endblock extrastyle %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Générer un Cours</h2>
+    <form method="POST" action="{% url 'generate_course' %}">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="title">Titre du Cours</label>
+            <input type="text" name="title" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Générer</button>
+    </form>
+</div>
+{% endblock content %}

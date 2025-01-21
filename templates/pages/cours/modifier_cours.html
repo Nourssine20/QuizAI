@@ -1,0 +1,37 @@
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editModalLabel">Modifier le Cours: {{ cours.titre }}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" enctype="multipart/form-data" action="{% url 'modifier_cours' cours.id %}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="titre">Titre</label>
+                        <input type="text" id="titre" name="titre" value="{{ form.titre.value }}" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" name="description" class="form-control" required>{{ form.description.value }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="fichier">Fichier</label>
+                        <input type="file" id="fichier" name="fichier" class="form-control-file">
+                    </div>
+                    <div class="form-group">
+                        <label for="lien">Lien</label>
+                        <input type="url" id="lien" name="lien" value="{{ form.lien.value }}" class="form-control">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">Modifier</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

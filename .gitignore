@@ -1,0 +1,24 @@
+# Django
+*.log
+*.pot
+*.pyc
+__pycache__/
+db.sqlite3
+*.sqlite3
+
+# Environments
+.env
+venv/
+env/
+venv/
+
+# VS Code
+.vscode/
+
+# Django Secret Key
+**/settings.py
+
+# Static files
+/static/
+# Media files
+/media/

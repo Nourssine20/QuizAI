@@ -1,0 +1,135 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block breadcrumbs %}{% endblock breadcrumbs %}
+
+{% block extrastyle %}
+<style>
+    body {
+        font-family: 'Arial', sans-serif; 
+        background-color: #f8f9fa; 
+        margin: 20px;
+    }
+    h1 {
+        margin-bottom: 30px; 
+        font-size: 2.5rem; 
+        color: #343a40;
+    }
+    .generated-course {
+        background-color: #ffffff; 
+        border: 1px solid #ccc; 
+        padding: 30px; 
+        border-radius: 10px; 
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); 
+        line-height: 1.6; 
+        white-space: pre-wrap; 
+        margin-bottom: 30px; 
+        max-height: 600px; 
+        overflow-y: auto;
+    }
+    .button-group {
+        margin-top: 40px; 
+        display: flex; 
+        justify-content: space-around;
+    }
+    .btn {
+        flex: 1; 
+        margin: 0 10px;
+    }
+    footer {
+        margin-top: 40px; 
+        text-align: center; 
+        font-size: 0.9rem; 
+        color: #6c757d;
+    }
+    .alert {
+        position: fixed; 
+        top: 20px; 
+        right: 20px; 
+        z-index: 1050; 
+        display: none;
+    }
+</style>
+
+{% endblock extrastyle %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+<div class="generated-course" id="courseContent">
+    {{ html_content|safe }}  <!-- Utiliser 'safe' pour afficher le HTML -->
+</div>
+
+<!-- Notifications -->
+<div class="alert alert-success" id="copyAlert" role="alert">
+    Le cours a été copié dans le presse-papier !
+</div>
+
+<!-- Groupement de boutons -->
+<div class="button-group">
+    <button class="btn btn-info copy-button" onclick="copyToClipboard()">Copier le cours</button>
+    <button class="btn btn-success download-button" onclick="downloadPDF()">Télécharger en PDF</button>
+    <a href="{% url 'liste_cours' %}" class="btn btn-primary back-button">Retour à la liste des cours</a>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<!-- Script pour copier le contenu -->
+<script>
+    function copyToClipboard() {
+        const courseContent = document.getElementById("courseContent").innerText;
+        navigator.clipboard.writeText(courseContent)
+            .then(() => {
+                const alert = document.getElementById("copyAlert");
+                alert.style.display = "block";
+                setTimeout(() => {
+                    alert.style.display = "none";
+                }, 3000);
+            })
+            .catch(err => {
+                console.error('Erreur lors de la copie : ', err);
+            });
+    }
+</script>
+
+<!-- Script pour télécharger le contenu en PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+<script>
+    function downloadPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const courseTitle = "{{ title }}";
+        const courseContent = document.getElementById("courseContent").innerText;
+
+        // Ajouter le titre
+        doc.setFontSize(20);
+        doc.text(courseTitle, 10, 20);
+        
+        // Définir la taille du texte pour le contenu
+        doc.setFontSize(12);
+        const pageHeight = doc.internal.pageSize.height;
+        const lineHeight = 10;
+        const margin = 10;
+        let y = 30;
+
+        // Diviser le contenu pour l'adapter aux pages
+        const lines = doc.splitTextToSize(courseContent, 180);
+        lines.forEach(line => {
+            if (y + lineHeight > pageHeight - margin) {
+                doc.addPage();
+                y = 20; // Réinitialiser la position en haut de la nouvelle page
+            }
+            doc.text(line, 10, y);
+            y += lineHeight;
+        });
+
+        // Enregistrer le PDF
+        doc.save(courseTitle + ".pdf");
+    }
+</script>
+
+<footer>
+    <p>&copy; 2024 Cours Généré. Tous droits réservés.</p>
+</footer>
+{% endblock content %}
